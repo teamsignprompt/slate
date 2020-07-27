@@ -1,15 +1,11 @@
 ---
-title: API Reference
+title: Bitcoin Quick Start for Developers
 
 language_tabs: # must be one of https://git.io/vQNgJ
   - shell
   - ruby
   - python
   - javascript
-
-toc_footers:
-  - <a href='#'>Sign Up for a Developer Key</a>
-  - <a href='https://github.com/slatedocs/slate'>Documentation Powered by Slate</a>
 
 includes:
   - errors
@@ -19,223 +15,290 @@ search: true
 code_clipboard: true
 ---
 
-# Introduction
+This step-by-step tutorial provides a hands-on walkthrough for quickly getting up and running with Bitcoin basics, from a developer's perspective. From building and installation of the headless Bitcoin daemon (bitcoind), interacting with it using the command line, and building a demo C++ application that can send RPC commands and process responses.
 
-Welcome to the Kittn API! You can use our API to access Kittn API endpoints, which can get information on various cats, kittens, and breeds in our database.
+# Preliminary Steps
 
-We have language bindings in Shell, Ruby, Python, and JavaScript! You can view code examples in the dark area to the right, and you can switch the programming language of the examples with the tabs in the top right.
+1. Install Prerequisites
 
-This example API documentation page was created with [Slate](https://github.com/slatedocs/slate). Feel free to edit it and use it as a base for your own API's documentation.
+```
+sudo apt install openssl autoconf automake libboost-dev libboost-all-dev libevent-dev
 
-# Authentication
-
-> To authorize, use this code:
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
+sudo add-apt-repository ppa:bitcoin/bitcoin
+sudo apt-get update
+sudo apt-get install libdb4.8-dev libdb4.8++-dev
 ```
 
-```python
-import kittn
+2. Clone the bitcoin repository and change into its directory
 
-api = kittn.authorize('meowmeowmeow')
+```
+git clone https://github.com/bitcoin/bitcoin.git
+cd bitcoin
 ```
 
-```shell
-# With shell, you can just pass the correct header with each request
-curl "api_endpoint_here"
-  -H "Authorization: meowmeowmeow"
+3. Configure the build
+
+```
+$ ./autogen.sh && ./configure
 ```
 
-```javascript
-const kittn = require('kittn');
+4. Building and installing the project
 
-let api = kittn.authorize('meowmeowmeow');
+```
+$ make -j4 && sudo make install
 ```
 
-> Make sure to replace `meowmeowmeow` with your API key.
+5. Check the installation
 
-Kittn uses API keys to allow access to the API. You can register a new Kittn API key at our [developer portal](http://example.com/developers).
-
-Kittn expects for the API key to be included in all API requests to the server in a header that looks like the following:
-
-`Authorization: meowmeowmeow`
-
-<aside class="notice">
-You must replace <code>meowmeowmeow</code> with your personal API key.
-</aside>
-
-# Kittens
-
-## Get All Kittens
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get
+```
+$ which bitcoind
 ```
 
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get()
+Example response:
+```
+/usr/local/bin/bitcoind
 ```
 
-```shell
-curl "http://example.com/api/kittens"
-  -H "Authorization: meowmeowmeow"
+```
+$ which bitcoin-cli
 ```
 
-```javascript
-const kittn = require('kittn');
-
-let api = kittn.authorize('meowmeowmeow');
-let kittens = api.kittens.get();
+Example response:
+```
+/usr/local/bin/bitcoin-cli
 ```
 
-> The above command returns JSON structured like this:
+Configure the Daemon
 
-```json
-[
-  {
-    "id": 1,
-    "name": "Fluffums",
-    "breed": "calico",
-    "fluffiness": 6,
-    "cuteness": 7
-  },
-  {
-    "id": 2,
-    "name": "Max",
-    "breed": "unknown",
-    "fluffiness": 5,
-    "cuteness": 10
-  }
-]
+1. Download a sample configuration file
+
+```
+$ wget https://raw.githubusercontent.com/bitcoin/bitcoin/master/share/examples/bitcoin.conf -O ~/.bitcoin/bitcoin.conf
 ```
 
-This endpoint retrieves all kittens.
+2. Generate a user and password
 
-### HTTP Request
-
-`GET http://example.com/api/kittens`
-
-### Query Parameters
-
-Parameter | Default | Description
---------- | ------- | -----------
-include_cats | false | If set to true, the result will also include cats.
-available | true | If set to false, the result will include kittens that have already been adopted.
-
-<aside class="success">
-Remember — a happy kitten is an authenticated kitten!
-</aside>
-
-## Get a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.get(2)
+```
+$ ./share/rpcauth/rpcauth.py user
 ```
 
-```python
-import kittn
-
-api = kittn.authorize('meowmeowmeow')
-api.kittens.get(2)
+Example response:
+```
+String to be appended to bitcoin.conf:
+rpcauth=user:bf2a249c8580766a1e4fcd9f777533b0$700645074a2f4a4ffd35cf1ec7ada6d8f148053ca4be729c3f54e63ce4664a2e
+Your password:
+l-sHsqLHrstIh1ZuOVIDjaLcRuYn-Xoy8prVgjboRnc=
 ```
 
-```shell
-curl "http://example.com/api/kittens/2"
-  -H "Authorization: meowmeowmeow"
+NOTE: Record your password for later use.
+
+3. Open ~/.bitcoin/bitcoin.conf, and search for the following (or similar) line:
+
+```
+# You can even add multiple entries of these to the server conf file, and client can use any of them:
+# rpcauth=bob:b2dd077cb54591a2f3139e69a897ac$4e71f08d48b4347cf8eff3815c0e25ae2e9a4340474079f55705f40574f4ec99
 ```
 
-```javascript
-const kittn = require('kittn');
+4. Below that line, add the rpcauth information generated by rpcauth.py.
 
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.get(2);
+Example:
+```
+rpcauth=user:bf2a249c8580766a1e4fcd9f777533b0$700645074a2f4a4ffd35cf1ec7ada6d8f148053ca4be729c3f54e63ce4664a2e
+
 ```
 
-> The above command returns JSON structured like this:
+# Running and Testing bitcoind
 
-```json
+1. Start the daemon
+
+```
+$ bitcoind -daemon
+```
+
+Example response:
+```
+Bitcoin Core starting
+```
+
+2. Show help
+
+```
+$ bitcoind -?
+```
+
+3. Test CLI commands
+
+```
+$ bitcoin-cli -getinfo
+```
+
+Example response:
+```
 {
-  "id": 2,
-  "name": "Max",
-  "breed": "unknown",
-  "fluffiness": 5,
-  "cuteness": 10
+  "version": 209900,
+  "blocks": 156419,
+  "headers": 641060,
+  "verificationprogress": 0.003607647832804664,
+  "timeoffset": -1,
+  "connections": 10,
+  "proxy": "",
+  "difficulty": 1090715.680051267,
+  "chain": "main",
+  "keypoolsize": 1000,
+  "paytxfee": 0.00000000,
+  "balance": 0.00000000,
+  "relayfee": 0.00001000,
+  "warnings": "This is a pre-release test build - use at your own risk - do not use for mining or merchant applications"
 }
 ```
 
-This endpoint retrieves a specific kitten.
+4. Stopping the daemon
 
-<aside class="warning">Inside HTML code blocks like this one, you can't use Markdown, so use <code>&lt;code&gt;</code> blocks to denote code.</aside>
-
-### HTTP Request
-
-`GET http://example.com/kittens/<ID>`
-
-### URL Parameters
-
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to retrieve
-
-## Delete a Specific Kitten
-
-```ruby
-require 'kittn'
-
-api = Kittn::APIClient.authorize!('meowmeowmeow')
-api.kittens.delete(2)
+```
+bitcoin-cli stop
 ```
 
-```python
-import kittn
+NOTE: If you may see the following error message if running commands too quickly after starting bitcoind:
 
-api = kittn.authorize('meowmeowmeow')
-api.kittens.delete(2)
+```
+error code: -28
+error message:
+Loading block index..
 ```
 
-```shell
-curl "http://example.com/api/kittens/2"
-  -X DELETE
-  -H "Authorization: meowmeowmeow"
+If you see this kind of error, wait another second or two and try again.
+
+The RPC Interface
+
+1. Start the daemon (if stopped).
+
+```
+$ bitcoind -daemon
 ```
 
-```javascript
-const kittn = require('kittn');
+2. Use the following curl command to test communication with the the RPC interface.
 
-let api = kittn.authorize('meowmeowmeow');
-let max = api.kittens.delete(2);
+```
+$ curl --user user --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "getblockchaininfo", "params": [] }' -H 'content-type: text/plain;' http://127.0.0.1:8332
 ```
 
-> The above command returns JSON structured like this:
+Example response:
+```
+Enter host password for user 'user':
+```
 
-```json
+3. Enter or paste the password generated earlier (e.g. l-sHsqLHrstIh1ZuOVIDjaLcRuYn-Xoy8prVgjboRnc=)
+
+Example response:
+```
+{"result":{"chain":"main","blocks":229810,"headers":641062,"bestblockhash":"000000000000019606fe717e1ec8832aadd0b531a9fdb3fc9b66d4396e4c0e6c","difficulty":6695826.282596251,"mediantime":1365171545,"verificationprogress":0.02829406551238997,"initialblockdownload":true,"chainwork":"0000000000000000000000000000000000000000000000340a2573e03179ff18","size_on_disk":7956125601,"pruned":false,"softforks":{"bip34":{"type":"buried","active":true,"height":227931},"bip66":{"type":"buried","active":false,"height":363725},"bip65":{"type":"buried","active":false,"height":388381},"csv":{"type":"buried","active":false,"height":419328},"segwit":{"type":"buried","active":false,"height":481824}},"warnings":"This is a pre-release test build - use at your own risk - do not use for mining or merchant applications"},"error":null,"id":"curltest"}
+```
+
+# Demo Example C++
+
+1. Install the following:
+
+```
+$ sudo apt install libcurlpp-dev libcurl4-openssl-dev
+```
+
+2. Create a file called main.cpp:
+
+```
+#include <curlpp/cURLpp.hpp>
+#include <curlpp/Easy.hpp>
+#include <curlpp/Options.hpp>
+
+#include <string>
+#include <sstream>
+#include <iostream>
+
+using namespace curlpp::options;
+
+int main(int argc, char *argv[])
 {
-  "id": 2,
-  "deleted" : ":("
+
+    if(argc < 3) {
+    std::cerr << argv[0] << ": Wrong number of arguments" << std::endl 
+	      << "Usage: " << argv[0] << " username password"
+	      << std::endl;
+    return EXIT_FAILURE;
+    }
+
+    std::string username(argv[1]);
+    std::string password(argv[2]);
+
+    std::string userpass = username + ":" + password;
+
+    try
+	{
+
+		curlpp::Cleanup btcCleanup;
+
+		curlpp::Easy btcRequest;
+
+        std::list<std::string> header; 
+        header.push_back("Content-Type: application/json"); 
+    
+        btcRequest.setOpt(new curlpp::options::HttpHeader(header)); 
+
+        // Set the daemon's URL.
+        curlpp::options::Url btcUrl(std::string("http://127.0.0.1:8332"));
+
+        // Set the username and password.
+        curlpp::options::UserPwd usrPsswd(userpass);
+
+        // Create the data payload
+        std::string json = R"({"jsonrpc": "1.0", "id":"curltest", "method": "getblockchaininfo", "params": [] })";
+
+        // Add options to the request
+        btcRequest.setOpt(btcUrl);
+        btcRequest.setOpt(usrPsswd);
+        btcRequest.setOpt(curlpp::options::PostFields(json));
+	    btcRequest.setOpt(curlpp::options::PostFieldSize(json.size()));
+
+		// Send the request 
+		btcRequest.perform();
+	}
+
+	catch(curlpp::RuntimeError & e)
+	{
+		std::cout << e.what() << std::endl;
+	}
+
+	catch(curlpp::LogicError & e)
+	{
+        // Result is sent to standard output.
+		std::cout << e.what() << std::endl;
+	}
+    
+  return 0;
+
 }
 ```
 
-This endpoint deletes a specific kitten.
+3. Build the demo application:
+ 
+```  
+$ g++ -Wall main.cpp -o btctest -Llib/x86_64-linux-gnu -lcurlpp -Wl,-Bsymbolic-functions -Wl,-z,relro -lcurl -Iinclude -I/usr/include/x86_64-linux-gnu
+```
 
-### HTTP Request
+4. Run the demo with your username and password as command line arguements. Example:
 
-`DELETE http://example.com/kittens/<ID>`
+```
+./btctest user l-sHsqLHrstIh1ZuOVIDjaLcRuYn-Xoy8prVgjboRnc=
+```
 
-### URL Parameters
+Example response:
+```
+{"result":{"chain":"main","blocks":303520,"headers":641075,"bestblockhash":"000000000000000024450e52f5d08622114b503713243aab15f3f7f989e76267","difficulty":10455720138.48484,"mediantime":1401561878,"verificationprogress":0.07238580672791109,"initialblockdownload":true,"chainwork":"000000000000000000000000000000000000000000007829790f458ed3674540","size_on_disk":22091527638,"pruned":false,"softforks":{"bip34":{"type":"buried","active":true,"height":227931},"bip66":{"type":"buried","active":false,"height":363725},"bip65":{"type":"buried","active":false,"height":388381},"csv":{"type":"buried","active":false,"height":419328},"segwit":{"type":"buried","active":false,"height":481824}},"warnings":"This is a pre-release test build - use at your own risk - do not use for mining or merchant applications"},"error":null,"id":"curltest"}
+```
 
-Parameter | Description
---------- | -----------
-ID | The ID of the kitten to delete
+# Congratulations!
+
+You have successfully installed and run the Bitcoin bitcoind daemon, and created a command line application to interact with it to fetch information.
+
+Next steps:
+
+Use `bitcoin-cli -rpcwait help` to find other RPC calls to add to the application.
 
