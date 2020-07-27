@@ -3,9 +3,7 @@ title: Bitcoin Quick Start for Developers
 
 language_tabs: # must be one of https://git.io/vQNgJ
   - shell
-  - ruby
-  - python
-  - javascript
+  - cpp
 
 includes:
   - errors
